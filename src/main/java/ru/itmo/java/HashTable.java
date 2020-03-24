@@ -1,9 +1,12 @@
 package ru.itmo.java;
 
 public class HashTable {
+
     private static final int DEFAULT_CAPACITY = 1000;
     private static final double DEFAULT_LOAD_FACTOR = 0.5;
     private static final Entry DUMMY_ENTRY = new Entry(null, null, true);
+    private static final int STEP_OF_LINEAR_PROBING = 7;
+    private static final double MULTIPLIER_FOR_HASH_FUNCTION = 0.619;
 
     private Entry[] array;
     private int capacity;
@@ -11,21 +14,6 @@ public class HashTable {
     private double loadFactor;
     private int threshold;
 
-    private static class Entry{
-        Object key;
-        Object value;
-        boolean isDeleted;
-
-        Entry(Object key, Object value) {
-            this(key, value,false);
-        }
-
-        Entry(Object key, Object value, boolean deleted) {
-            this.key = key;
-            this.value = value;
-            this.isDeleted = deleted;
-        }
-    }
 
     public HashTable() {
         this(DEFAULT_CAPACITY);
@@ -41,27 +29,30 @@ public class HashTable {
 
     public HashTable(int capacity, double loadFactor) {
         this.capacity = capacity;
-        this.loadFactor = Math.max(Math.min(loadFactor,1),0);
+        this.loadFactor = Math.max(Math.min(loadFactor, 1), 0);
 
         size = 0;
         array = new Entry[capacity];
 
-        this.threshold = (int) (this.loadFactor*capacity);
+        this.threshold = (int) (this.loadFactor * capacity);
     }
 
-    private int hashCode(Object key){
+    private int hashCode(Object key) {
 
-        return (int)(capacity * (0.618 * Math.abs(key.hashCode()) % 1));
+        return (int) (capacity * (MULTIPLIER_FOR_HASH_FUNCTION * Math.abs(key.hashCode()) % 1));
     }
 
-    private int findIndexForKey(Object key){
+    private int findIndexForKey(Object key) {
         int hashIndex = hashCode(key);
         int curIndex = hashIndex;
         int i = 0;
         while (array[curIndex] != null
                 && (!(key.equals(array[curIndex].key)) || array[curIndex].isDeleted)) {
             i++;
-            curIndex = (hashIndex + i * 23) % capacity;
+            curIndex = (hashIndex + i * STEP_OF_LINEAR_PROBING) % capacity;
+            if(curIndex == hashIndex){
+                return -1;
+            }
         }
         if (array[curIndex] == null) {
             return -1;
@@ -70,7 +61,7 @@ public class HashTable {
         return curIndex;
     }
 
-    Object put(Object key, Object value) {
+    public Object put(Object key, Object value) {
         Entry temp = new Entry(key, value);
 
         int hashIndex = findIndexForKey(key);
@@ -90,7 +81,7 @@ public class HashTable {
 
         while (!(array[curIndex] == null || array[curIndex].isDeleted)) {
             i++;
-            curIndex = (index + i * 23) % capacity;
+            curIndex = (index + i * STEP_OF_LINEAR_PROBING) % capacity;
         }
 
         array[curIndex] = temp;
@@ -103,7 +94,7 @@ public class HashTable {
         return null;
     }
 
-    Object get(Object key) {
+    public Object get(Object key) {
 
         int hashIndex = findIndexForKey(key);
 
@@ -113,7 +104,7 @@ public class HashTable {
         return array[hashIndex].value;
     }
 
-    Object remove(Object key) {
+    public Object remove(Object key) {
 
         int index = findIndexForKey(key);
         if (index == -1) {
@@ -127,23 +118,39 @@ public class HashTable {
         return removedValue;
     }
 
-    int size() {
+    public int size() {
         return size;
     }
 
-    private void resize(){
+    private void resize() {
 
         Entry[] oldArray = array;
 
-        capacity*=2;
+        capacity *= 2;
         array = new Entry[capacity];
         threshold = (int) (loadFactor * capacity);
         size = 0;
 
-        for(Entry e : oldArray){
-            if(!(e == null || e.isDeleted)){
+        for (Entry e : oldArray) {
+            if (!(e == null || e.isDeleted)) {
                 this.put(e.key, e.value);
             }
+        }
+    }
+
+    private static class Entry {
+        private Object key;
+        Object value;
+        boolean isDeleted;
+
+        Entry(Object key, Object value) {
+            this(key, value, false);
+        }
+
+        Entry(Object key, Object value, boolean deleted) {
+            this.key = key;
+            this.value = value;
+            this.isDeleted = deleted;
         }
     }
 
